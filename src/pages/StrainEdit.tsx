@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getStrain, createStrain, updateStrain, STRAINS_STUB } from '../api/strains';
+import { getStrain, createStrain, updateStrain } from '../api/strains';
 import type { Strain } from '../types';
 import Spinner from '../components/Spinner';
 
-const EFFECTS = ['relaxed', 'euphoric', 'creative', 'focused', 'sleepy', 'energetic', 'giggly', 'hungry', 'uplifted', 'talkative'];
-const USE_CASES = ['sleep', 'pain', 'anxiety', 'focus', 'social', 'appetite', 'mood', 'nausea'];
-const FLAVORS = ['earthy', 'citrus', 'pine', 'sweet', 'berry', 'diesel', 'skunk', 'floral', 'spicy', 'tropical', 'mint', 'cheese'];
-const METHODS = ['flower', 'vape', 'edible', 'concentrate', 'tincture', 'topical'];
+const EFFECTS = ['relaxed', 'euphoric', 'creative', 'focused', 'sleepy', 'energetic', 'giggly'];
+const USE_CASES = ['sleep', 'pain', 'anxiety', 'focus', 'social', 'appetite'];
+const FLAVORS = ['sweet', 'citrus', 'earthy', 'diesel', 'pine', 'floral', 'spicy', 'berry'];
+const METHODS = ['flower', 'vape', 'edible', 'concentrate', 'pre-roll'];
 const TYPES: Strain['type'][] = ['sativa', 'indica', 'hybrid'];
 
-type StrainForm = Omit<Strain, 'id' | 'session_count' | 'created_at' | 'updated_at'>;
+type StrainForm = Omit<Strain, 'id' | 'session_count' | 'created_at' | 'updated_at' | 'active'>;
 
 const blank: StrainForm = {
   name: '', aliases: [], type: 'hybrid', lineage: null,
@@ -30,7 +30,7 @@ function ChipSelector({ label, options, selected, onChange }: {
           <button
             key={o} type="button"
             onClick={() => onChange(selected.includes(o) ? selected.filter(x => x !== o) : [...selected, o])}
-            className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+            className={`px-3 py-1 rounded-full text-sm border transition-colors capitalize ${
               selected.includes(o)
                 ? 'border-teal bg-teal/10 text-teal'
                 : 'border-border text-muted hover:border-muted'
@@ -60,7 +60,24 @@ export default function StrainEdit() {
   useEffect(() => {
     if (isNew || !id) return;
     getStrain(id)
-      .then(r => setForm({ ...r.strain }))
+      .then(r => setForm({
+        name: r.strain.name,
+        aliases: r.strain.aliases,
+        type: r.strain.type,
+        lineage: r.strain.lineage,
+        thc_min: r.strain.thc_min,
+        thc_max: r.strain.thc_max,
+        cbd_min: r.strain.cbd_min,
+        cbd_max: r.strain.cbd_max,
+        terpenes: r.strain.terpenes,
+        effects: r.strain.effects,
+        use_cases: r.strain.use_cases,
+        flavors: r.strain.flavors,
+        about: r.strain.about,
+        cautions: r.strain.cautions,
+        best_method: r.strain.best_method,
+        beginner_friendly: r.strain.beginner_friendly,
+      }))
       .catch(() => navigate('/strains'))
       .finally(() => setLoading(false));
   }, [id, isNew, navigate]);
@@ -70,8 +87,11 @@ export default function StrainEdit() {
   }
 
   function addAlias() {
-    if (!aliasInput.trim()) return;
-    set('aliases', [...form.aliases, aliasInput.trim()]);
+    const trimmed = aliasInput.trim();
+    if (!trimmed) return;
+    // Support comma-separated input
+    const parts = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+    set('aliases', [...form.aliases, ...parts]);
     setAliasInput('');
   }
 
@@ -92,7 +112,7 @@ export default function StrainEdit() {
     try {
       if (isNew) {
         const { strain } = await createStrain(form);
-        navigate(`/strains/${strain.id}`);
+        navigate(`/strains/${strain.id}`, { replace: true });
       } else if (id) {
         await updateStrain(id, form);
         setSavedMsg(true);
@@ -109,26 +129,28 @@ export default function StrainEdit() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/strains')} className="text-muted hover:text-text text-sm">← Strains</button>
-      </div>
+      <button onClick={() => navigate('/strains')} className="text-muted hover:text-text text-sm transition-colors">
+        ← Strains
+      </button>
 
       <h1 className="text-2xl font-bold text-text">{isNew ? 'New Strain' : form.name}</h1>
 
-      {STRAINS_STUB && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-3 text-sm text-yellow-400">
-          Session-only — data will not persist until the Strains API is built.
-        </div>
-      )}
-
       <form onSubmit={save} className="space-y-8">
-        {/* Basic */}
+
+        {/* ── Basic ─────────────────────────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Basic</h2>
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2">Basic</h2>
+
           <div>
             <label className="label">Name *</label>
-            <input className="input max-w-sm" value={form.name} onChange={e => set('name', e.target.value)} autoFocus={isNew} />
+            <input
+              className="input max-w-sm"
+              value={form.name}
+              onChange={e => set('name', e.target.value)}
+              autoFocus={isNew}
+            />
           </div>
+
           <div>
             <label className="label">Type</label>
             <div className="flex gap-2">
@@ -136,8 +158,10 @@ export default function StrainEdit() {
                 <button
                   key={t} type="button"
                   onClick={() => set('type', t)}
-                  className={`px-4 py-2 rounded-lg text-sm border transition-colors ${
-                    form.type === t ? 'border-teal bg-teal/10 text-teal' : 'border-border text-muted hover:border-muted'
+                  className={`px-4 py-2 rounded-lg text-sm border transition-colors capitalize ${
+                    form.type === t
+                      ? 'border-teal bg-teal/10 text-teal font-medium'
+                      : 'border-border text-muted hover:border-muted'
                   }`}
                 >
                   {t}
@@ -145,78 +169,156 @@ export default function StrainEdit() {
               ))}
             </div>
           </div>
+
           <div>
-            <label className="label">Aliases</label>
+            <label className="label">Aliases <span className="text-muted normal-case font-normal">(comma-separated or add individually)</span></label>
             <div className="flex gap-2 mb-2">
-              <input className="input max-w-xs" value={aliasInput} onChange={e => setAliasInput(e.target.value)} placeholder="Add alias" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }} />
-              <button type="button" className="btn-ghost" onClick={addAlias}>Add</button>
+              <input
+                className="input max-w-xs"
+                value={aliasInput}
+                onChange={e => setAliasInput(e.target.value)}
+                placeholder="e.g. OG Kush, The OG"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }}
+              />
+              <button type="button" className="btn-ghost shrink-0" onClick={addAlias}>Add</button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {form.aliases.map((a, i) => (
-                <span key={i} className="bg-border text-text px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                  {a}
-                  <button type="button" className="text-muted hover:text-red-400" onClick={() => set('aliases', form.aliases.filter((_, j) => j !== i))}>&times;</button>
-                </span>
-              ))}
-            </div>
+            {form.aliases.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {form.aliases.map((a, i) => (
+                  <span key={i} className="bg-border/60 text-text px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                    {a}
+                    <button
+                      type="button"
+                      className="text-muted hover:text-red-400 transition-colors leading-none"
+                      onClick={() => set('aliases', form.aliases.filter((_, j) => j !== i))}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
+
           <div>
             <label className="label">Lineage</label>
-            <input className="input" placeholder="e.g. OG Kush × Durban Poison" value={form.lineage ?? ''} onChange={e => set('lineage', e.target.value || null)} />
+            <input
+              className="input"
+              placeholder="e.g. OG Kush × Durban Poison"
+              value={form.lineage ?? ''}
+              onChange={e => set('lineage', e.target.value || null)}
+            />
           </div>
         </section>
 
-        {/* Lab Data */}
+        {/* ── Lab Data ──────────────────────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Lab Data</h2>
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2">Lab Data</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {([['thc_min', 'THC Min %'], ['thc_max', 'THC Max %'], ['cbd_min', 'CBD Min %'], ['cbd_max', 'CBD Max %']] as const).map(([k, lbl]) => (
+            {([
+              ['thc_min', 'THC Min %'],
+              ['thc_max', 'THC Max %'],
+              ['cbd_min', 'CBD Min %'],
+              ['cbd_max', 'CBD Max %'],
+            ] as const).map(([k, lbl]) => (
               <div key={k}>
                 <label className="label">{lbl}</label>
-                <input className="input" type="number" step="0.1" min="0" max="100" value={form[k] ?? ''} onChange={e => set(k, e.target.value ? parseFloat(e.target.value) : null)} />
+                <input
+                  className="input"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={form[k] ?? ''}
+                  onChange={e => set(k, e.target.value ? parseFloat(e.target.value) : null)}
+                />
               </div>
             ))}
           </div>
         </section>
 
-        {/* Terpenes */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Terpenes</h2>
+        {/* ── Terpenes ──────────────────────────────────────────────────────── */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2">Terpenes</h2>
           <div className="flex flex-col sm:flex-row gap-2">
-            <input className="input" placeholder="Terpene name" value={terp.name} onChange={e => setTerp(t => ({ ...t, name: e.target.value }))} />
-            <input className="input" placeholder="Effect note" value={terp.effect} onChange={e => setTerp(t => ({ ...t, effect: e.target.value }))} />
+            <input
+              className="input"
+              placeholder="Terpene name (e.g. Myrcene)"
+              value={terp.name}
+              onChange={e => setTerp(t => ({ ...t, name: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTerpene(); } }}
+            />
+            <input
+              className="input"
+              placeholder="Effect note (e.g. relaxing)"
+              value={terp.effect}
+              onChange={e => setTerp(t => ({ ...t, effect: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTerpene(); } }}
+            />
             <button type="button" className="btn-ghost shrink-0" onClick={addTerpene}>Add</button>
           </div>
-          {form.terpenes.map((t, i) => (
-            <div key={i} className="flex items-center justify-between bg-bg border border-border rounded-lg px-4 py-2">
-              <div>
-                <span className="text-sm font-medium text-text">{t.name}</span>
-                {t.effect && <span className="text-xs text-muted ml-2">— {t.effect}</span>}
+          <div className="space-y-2">
+            {form.terpenes.map((t, i) => (
+              <div key={i} className="flex items-center justify-between bg-bg border border-border rounded-lg px-4 py-2.5">
+                <div>
+                  <span className="text-sm font-medium text-text">{t.name}</span>
+                  {t.effect && <span className="text-xs text-muted ml-2">— {t.effect}</span>}
+                </div>
+                <button type="button" className="text-red-400 text-xs hover:underline ml-4" onClick={() => removeTerpene(i)}>
+                  Remove
+                </button>
               </div>
-              <button type="button" className="text-red-400 text-xs hover:underline" onClick={() => removeTerpene(i)}>Remove</button>
-            </div>
-          ))}
+            ))}
+          </div>
         </section>
 
-        {/* Effects & Use Cases */}
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Effects & Use Cases</h2>
-          <ChipSelector label="Effects" options={EFFECTS} selected={form.effects} onChange={v => set('effects', v)} />
-          <ChipSelector label="Use Cases" options={USE_CASES} selected={form.use_cases} onChange={v => set('use_cases', v)} />
-          <ChipSelector label="Flavor Profile" options={FLAVORS} selected={form.flavors} onChange={v => set('flavors', v)} />
+        {/* ── Effects & Use Cases ───────────────────────────────────────────── */}
+        <section className="space-y-5">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2">Effects & Use Cases</h2>
+          <ChipSelector
+            label="Effects"
+            options={EFFECTS}
+            selected={form.effects}
+            onChange={v => set('effects', v)}
+          />
+          <ChipSelector
+            label="Use Cases"
+            options={USE_CASES}
+            selected={form.use_cases}
+            onChange={v => set('use_cases', v)}
+          />
+          <ChipSelector
+            label="Flavor Profile"
+            options={FLAVORS}
+            selected={form.flavors}
+            onChange={v => set('flavors', v)}
+          />
         </section>
 
-        {/* Editorial */}
+        {/* ── Editorial ─────────────────────────────────────────────────────── */}
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Editorial</h2>
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2">Editorial</h2>
+
           <div>
             <label className="label">About</label>
-            <textarea className="input h-28 resize-none" value={form.about ?? ''} onChange={e => set('about', e.target.value || null)} />
+            <textarea
+              className="input h-32 resize-none"
+              placeholder="Editorial description of this strain…"
+              value={form.about ?? ''}
+              onChange={e => set('about', e.target.value || null)}
+            />
           </div>
+
           <div>
             <label className="label">Cautions / Side Effects</label>
-            <input className="input" placeholder="e.g. dry mouth, paranoia at high doses" value={form.cautions ?? ''} onChange={e => set('cautions', e.target.value || null)} />
+            <textarea
+              className="input h-20 resize-none"
+              placeholder="e.g. dry mouth, paranoia at high doses, increased heart rate"
+              value={form.cautions ?? ''}
+              onChange={e => set('cautions', e.target.value || null)}
+            />
           </div>
+
           <div>
             <label className="label">Best Method</label>
             <div className="flex flex-wrap gap-2">
@@ -224,8 +326,10 @@ export default function StrainEdit() {
                 <button
                   key={m} type="button"
                   onClick={() => set('best_method', form.best_method === m ? null : m)}
-                  className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                    form.best_method === m ? 'border-teal bg-teal/10 text-teal' : 'border-border text-muted hover:border-muted'
+                  className={`px-3 py-1.5 rounded-full text-sm border transition-colors capitalize ${
+                    form.best_method === m
+                      ? 'border-teal bg-teal/10 text-teal font-medium'
+                      : 'border-border text-muted hover:border-muted'
                   }`}
                 >
                   {m}
@@ -233,27 +337,39 @@ export default function StrainEdit() {
               ))}
             </div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
-            <input type="checkbox" className="accent-teal" checked={form.beginner_friendly} onChange={e => set('beginner_friendly', e.target.checked)} />
+
+          <label className="flex items-center gap-3 text-sm text-text cursor-pointer">
+            <input
+              type="checkbox"
+              className="accent-teal w-4 h-4"
+              checked={form.beginner_friendly}
+              onChange={e => set('beginner_friendly', e.target.checked)}
+            />
             Beginner Friendly
           </label>
         </section>
 
-        {/* AI Enrichment Placeholder */}
-        <section className="card border-dashed border-muted">
-          <h2 className="text-sm font-semibold text-muted mb-2">AI Enrichment</h2>
-          <p className="text-xs text-muted mb-3">Auto-fill the intelligence profile using the spinup-strain-profile skill.</p>
-          <button type="button" disabled className="btn-ghost opacity-50 text-xs">
+        {/* ── AI Enrichment placeholder ─────────────────────────────────────── */}
+        <section className="border border-dashed border-border rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-muted mb-1">AI Enrichment</h2>
+          <p className="text-xs text-muted mb-3">
+            Auto-fill the intelligence profile using the spinup-strain-profile skill.
+          </p>
+          <button type="button" disabled className="btn-ghost opacity-40 text-xs cursor-not-allowed">
             Enrich with AI — coming soon
           </button>
         </section>
 
         {err && <p className="text-red-400 text-sm">{err}</p>}
-        <div className="flex items-center gap-3 pb-8">
+
+        <div className="flex items-center gap-4 pb-10">
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Saving…' : isNew ? 'Create Strain' : 'Save Changes'}
           </button>
           {saved && <span className="text-teal text-sm">Saved ✓</span>}
+          <button type="button" className="btn-ghost ml-auto" onClick={() => navigate('/strains')}>
+            Cancel
+          </button>
         </div>
       </form>
     </div>
