@@ -298,7 +298,31 @@ function ProfileTab({ operatorId }: { operatorId: string }) {
     e.preventDefault();
     setSaving(true); setErr(''); setSavedMsg(false);
     try {
-      const { profile: updated } = await setProfile(operatorId, profile);
+      // Build payload with only fields ProfileBody accepts.
+      // Omit null/empty values; coerce lat/lng to numbers (pg returns NUMERIC as strings).
+      const payload: Record<string, unknown> = {};
+      const set_ = (k: string, v: unknown) => { if (v !== null && v !== undefined && v !== '') payload[k] = v; };
+
+      set_('about', profile.about);
+      if (profile.hours != null) {
+        const cleanHours = Object.fromEntries(Object.entries(profile.hours).filter(([, v]) => v.trim() !== ''));
+        payload['hours'] = Object.keys(cleanHours).length ? cleanHours : null;
+      }
+      set_('website', profile.website);
+      set_('instagram', profile.instagram);
+      set_('leafly_url', profile.leafly_url);
+      set_('dutchie_url', profile.dutchie_url);
+      set_('other_ordering_url', profile.other_ordering_url);
+      set_('ordering_platform', profile.ordering_platform);
+      if (profile.payment_methods?.length) payload['payment_methods'] = profile.payment_methods;
+      payload['black_owned'] = !!profile.black_owned;
+      payload['woman_owned'] = !!profile.woman_owned;
+      payload['lgbtq_friendly'] = !!profile.lgbtq_friendly;
+      payload['veteran_owned'] = !!profile.veteran_owned;
+      if (profile.lat != null && profile.lat !== '') payload['lat'] = parseFloat(String(profile.lat));
+      if (profile.lng != null && profile.lng !== '') payload['lng'] = parseFloat(String(profile.lng));
+
+      const { profile: updated } = await setProfile(operatorId, payload as Partial<OperatorProfile>);
       setProfileState(updated);
       setSavedMsg(true);
       setTimeout(() => setSavedMsg(false), 3000);
