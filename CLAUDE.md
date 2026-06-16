@@ -83,12 +83,14 @@ src/
 | Replace specials | `POST /operators/:id/specials` |
 | Delete special | `DELETE /operators/:id/specials/:specialId` |
 
-### Strains (not yet built)
-The `src/api/strains.ts` file stubs all CRUD with in-memory mock data. To wire up:
-1. Add `strains` table + migration to `stashpass-api`
-2. Add `GET/POST/PUT/DELETE /strains` routes
-3. Replace stub functions in `src/api/strains.ts` with real `api.get/post/put/delete` calls
-4. Remove the `STRAINS_STUB` warning banners
+### Strains (live)
+| Action | Endpoint |
+|---|---|
+| List / search | `GET /strains[?q=&type=]` |
+| Get one | `GET /strains/:id` |
+| Create | `POST /strains` |
+| Update | `PUT /strains/:id` |
+| Delete (soft) | `DELETE /strains/:id` |
 
 ---
 
@@ -99,7 +101,9 @@ The `src/api/strains.ts` file stubs all CRUD with in-memory mock data. To wire u
 - Locations use soft-delete (`active = FALSE`) — the delete button calls `DELETE /operators/:id/locations/:locationId` which sets `active = false`, not a hard delete.
 - Specials are stored as a JSONB array on `operator_profiles.specials`. Replace the whole array via `POST /specials` or remove one via `DELETE /specials/:specialId`.
 - The Queue page filters operators with `tier = 'pending'`. The "Enrich" button navigates to the operator's edit page. "Skip" is a placeholder (no tier change on the backend — needs a `PATCH /operators/:id` route to update tier).
-- Strains form supports: name, aliases, type (sativa/indica/hybrid), lineage, THC/CBD ranges, terpenes (name+effect), effects chips, use case chips, flavor chips, about text, cautions, best method, beginner-friendly toggle, AI enrichment placeholder.
+- Strains form: name, aliases (comma-separated or add one-by-one), type chips, lineage, THC/CBD min/max, terpenes (name+effect rows), effects chips (7), use-case chips (6), flavor chips (8), about textarea, cautions textarea, best method (Flower/Vape/Edible/Concentrate/Pre-Roll), beginner-friendly toggle, AI enrichment placeholder.
+- Strains list: debounced server-side search (`?q=`) hits name + JSONB alias array; columns are name/aliases, type badge, session count, date added.
+- Strains uses soft-delete (`active = FALSE`); deleted records remain in the DB.
 
 ---
 
@@ -131,3 +135,4 @@ Enter `CIRCLES_API_SECRET` value from Railway env vars at the setup screen.
 | Date | Work |
 |------|------|
 | 2026-06-15 | Initial scaffold — Vite + React + TS + Tailwind; all 6 nav sections; full operator CRUD + profile + locations + specials; strain intelligence form; queue page; GitHub Actions deploy; added GET /operators to stashpass-api |
+| 2026-06-16 | Strains section live — 006_strains.sql migration, strain.service.ts, /strains routes in API; admin wired to real endpoints; debounced search, session count column, pre-roll method, cautions textarea, comma-separated aliases |
