@@ -19,8 +19,18 @@ export const createOperator = (body: {
   city?: string;
   state?: string;
   category?: string;
+  subcategory?: string;
   tier?: string;
 }) => api.post<{ operator: Operator }>('/operators', body);
+
+export const patchOperator = (id: string, body: {
+  name?: string;
+  city?: string | null;
+  state?: string | null;
+  category?: string;
+  subcategory?: string | null;
+  tier?: string;
+}) => api.patch<{ operator: Operator }>(`/operators/${id}`, body);
 
 // ── Profiles ────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getOperator, getProfile, patchProfile,
+  getOperator, getProfile, patchProfile, patchOperator,
   getLocations, addLocation, updateLocation, deleteLocation,
   replaceSpecials, deleteSpecial,
 } from '../api/operators';
@@ -14,6 +14,18 @@ import Modal from '../components/Modal';
 
 const PAYMENT_OPTIONS = ['Cash', 'Debit', 'Credit', 'CanPay', 'ACH', 'Check', 'ATM'];
 const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+
+const CATEGORIES = ['cannabis', 'coffee', 'barbershop', 'restaurant', 'retail', 'wellness', 'liquor', 'general'];
+const SUBCATEGORIES: Record<string, string[]> = {
+  cannabis:    ['dispensary', 'smoke_shop', 'wellness_retail'],
+  coffee:      ['cafe', 'coffee_shop'],
+  barbershop:  ['barbershop', 'salon'],
+  restaurant:  ['restaurant', 'bar'],
+  retail:      ['general_retail', 'boutique'],
+  wellness:    ['wellness_center', 'yoga_studio', 'gym'],
+  liquor:      ['liquor_store'],
+  general:     ['general'],
+};
 
 type Tab = 'profile' | 'brand' | 'locations' | 'specials';
 
@@ -559,6 +571,10 @@ export default function OperatorEdit() {
   const [operator, setOperator] = useState<Operator | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('profile');
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [catForm, setCatForm] = useState({ category: '', subcategory: '' });
+  const [catSaving, setCatSaving] = useState(false);
+  const [catErr, setCatErr] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -566,6 +582,42 @@ export default function OperatorEdit() {
       .then(r => setOperator(r.operator))
       .finally(() => setLoading(false));
   }, [id]);
+
+  function openCatEdit() {
+    if (!operator) return;
+    setCatForm({ category: operator.category, subcategory: operator.subcategory ?? '' });
+    setCatErr('');
+    setEditingCategory(true);
+  }
+
+  function setCatField(k: 'category' | 'subcategory', v: string) {
+    setCatForm(f => {
+      const next = { ...f, [k]: v };
+      if (k === 'category') {
+        const subs = SUBCATEGORIES[v] ?? [];
+        next.subcategory = subs[0] ?? '';
+      }
+      return next;
+    });
+  }
+
+  async function saveCat(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !operator) return;
+    setCatSaving(true); setCatErr('');
+    try {
+      const { operator: updated } = await patchOperator(id, {
+        category: catForm.category,
+        subcategory: catForm.subcategory || null,
+      });
+      setOperator(updated);
+      setEditingCategory(false);
+    } catch (e) {
+      setCatErr(String(e));
+    } finally {
+      setCatSaving(false);
+    }
+  }
 
   if (loading) return <div className="flex justify-center py-16"><Spinner size={32} /></div>;
   if (!operator || !id) return <div className="text-muted p-8">Operator not found.</div>;
@@ -577,6 +629,8 @@ export default function OperatorEdit() {
     { key: 'specials', label: 'Specials' },
   ];
 
+  const subcatOptions = SUBCATEGORIES[catForm.category] ?? [];
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -586,11 +640,39 @@ export default function OperatorEdit() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text">{operator.name}</h1>
-          <p className="text-muted text-sm mt-0.5">
-            {[operator.city, operator.state].filter(Boolean).join(', ') || 'No location set'}
-            {' · '}{operator.category}{' · '}
-            <span className="text-teal">{operator.tier}</span>
-          </p>
+          {editingCategory ? (
+            <form onSubmit={saveCat} className="flex items-center gap-2 mt-2 flex-wrap">
+              <select
+                className="input py-1 text-sm"
+                value={catForm.category}
+                onChange={e => setCatField('category', e.target.value)}
+              >
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+              <select
+                className="input py-1 text-sm"
+                value={catForm.subcategory}
+                onChange={e => setCatField('subcategory', e.target.value)}
+              >
+                {subcatOptions.map(s => <option key={s}>{s}</option>)}
+              </select>
+              <button type="submit" className="btn-primary py-1 text-sm" disabled={catSaving}>
+                {catSaving ? '…' : 'Save'}
+              </button>
+              <button type="button" className="btn-ghost py-1 text-sm" onClick={() => setEditingCategory(false)}>
+                Cancel
+              </button>
+              {catErr && <span className="text-red-400 text-xs">{catErr}</span>}
+            </form>
+          ) : (
+            <p className="text-muted text-sm mt-0.5">
+              {[operator.city, operator.state].filter(Boolean).join(', ') || 'No location set'}
+              {' · '}{operator.category}{operator.subcategory ? ` / ${operator.subcategory}` : ''}{' · '}
+              <span className="text-teal">{operator.tier}</span>
+              {' · '}
+              <button className="text-teal hover:underline" onClick={openCatEdit}>edit category</button>
+            </p>
+          )}
         </div>
       </div>
 

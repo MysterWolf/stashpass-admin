@@ -3,6 +3,7 @@ export interface Operator {
   name: string;
   slug: string;
   category: string;
+  subcategory: string | null;
   city: string | null;
   state: string | null;
   tier: string;

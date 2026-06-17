@@ -13,15 +13,38 @@ function tierColor(tier: string): 'teal' | 'yellow' | 'gray' | 'blue' {
   return 'gray';
 }
 
-const CATEGORIES = ['cannabis', 'coffee', 'barbershop', 'restaurant', 'retail', 'wellness', 'general'];
+const CATEGORIES = ['cannabis', 'coffee', 'barbershop', 'restaurant', 'retail', 'wellness', 'liquor', 'general'];
 const TIERS = ['standard', 'premium', 'pending'];
 
+const SUBCATEGORIES: Record<string, string[]> = {
+  cannabis:    ['dispensary', 'smoke_shop', 'wellness_retail'],
+  coffee:      ['cafe', 'coffee_shop'],
+  barbershop:  ['barbershop', 'salon'],
+  restaurant:  ['restaurant', 'bar'],
+  retail:      ['general_retail', 'boutique'],
+  wellness:    ['wellness_center', 'yoga_studio', 'gym'],
+  liquor:      ['liquor_store'],
+  general:     ['general'],
+};
+
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (op: Operator) => void }) {
-  const [form, setForm] = useState({ name: '', city: '', state: '', category: 'cannabis', tier: 'standard' });
+  const [form, setForm] = useState({
+    name: '', city: '', state: '',
+    category: 'cannabis', subcategory: 'dispensary', tier: 'standard',
+  });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  function set(k: keyof typeof form, v: string) { setForm(f => ({ ...f, [k]: v })); }
+  function set(k: keyof typeof form, v: string) {
+    setForm(f => {
+      const next = { ...f, [k]: v };
+      if (k === 'category') {
+        const subs = SUBCATEGORIES[v] ?? [];
+        next.subcategory = subs[0] ?? '';
+      }
+      return next;
+    });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +56,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         city: form.city.trim() || undefined,
         state: form.state.trim() || undefined,
         category: form.category,
+        subcategory: form.subcategory || undefined,
         tier: form.tier,
       });
       onCreated(operator);
@@ -42,6 +66,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
       setSaving(false);
     }
   }
+
+  const subcatOptions = SUBCATEGORIES[form.category] ?? [];
 
   return (
     <Modal title="New Operator" onClose={onClose}>
@@ -62,17 +88,23 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="label">Category</label>
+            <label className="label">Market Category</label>
             <select className="input" value={form.category} onChange={e => set('category', e.target.value)}>
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
           <div>
-            <label className="label">Tier</label>
-            <select className="input" value={form.tier} onChange={e => set('tier', e.target.value)}>
-              {TIERS.map(t => <option key={t}>{t}</option>)}
+            <label className="label">Subcategory</label>
+            <select className="input" value={form.subcategory} onChange={e => set('subcategory', e.target.value)}>
+              {subcatOptions.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="label">Tier</label>
+          <select className="input" value={form.tier} onChange={e => set('tier', e.target.value)}>
+            {TIERS.map(t => <option key={t}>{t}</option>)}
+          </select>
         </div>
         {err && <p className="text-red-400 text-sm">{err}</p>}
         <div className="flex justify-end gap-3 pt-2">
@@ -154,7 +186,9 @@ export default function Operators() {
                     <td className="px-4 py-3 text-muted hidden md:table-cell">
                       {[op.city, op.state].filter(Boolean).join(', ') || '—'}
                     </td>
-                    <td className="px-4 py-3 text-muted hidden md:table-cell">{op.category}</td>
+                    <td className="px-4 py-3 text-muted hidden md:table-cell">
+                      {op.category}{op.subcategory ? ` / ${op.subcategory}` : ''}
+                    </td>
                     <td className="px-4 py-3"><Badge label={op.tier} color={tierColor(op.tier)} /></td>
                     <td className="px-4 py-3 text-muted hidden md:table-cell">{op.location_count ?? 0}</td>
                     <td className="px-4 py-3 text-right">
