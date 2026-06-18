@@ -136,3 +136,4 @@ Enter `CIRCLES_API_SECRET` value from Railway env vars at the setup screen.
 |------|------|
 | 2026-06-15 | Initial scaffold — Vite + React + TS + Tailwind; all 6 nav sections; full operator CRUD + profile + locations + specials; strain intelligence form; queue page; GitHub Actions deploy; added GET /operators to stashpass-api |
 | 2026-06-16 | Strains section live — 006_strains.sql migration, strain.service.ts, /strains routes in API; admin wired to real endpoints; debounced search, session count column, pre-roll method, cautions textarea, comma-separated aliases |
+| 2026-06-18 | Operator name inline edit — `OperatorEdit.tsx` now has an editable name field using the same inline form pattern as category/subcategory. Calls `PATCH /operators/:id { name }`. |
