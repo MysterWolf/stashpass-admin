@@ -571,6 +571,10 @@ export default function OperatorEdit() {
   const [operator, setOperator] = useState<Operator | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('profile');
+  const [editingName, setEditingName] = useState(false);
+  const [nameForm, setNameForm] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameErr, setNameErr] = useState('');
   const [editingCategory, setEditingCategory] = useState(false);
   const [catForm, setCatForm] = useState({ category: '', subcategory: '' });
   const [catSaving, setCatSaving] = useState(false);
@@ -582,6 +586,28 @@ export default function OperatorEdit() {
       .then(r => setOperator(r.operator))
       .finally(() => setLoading(false));
   }, [id]);
+
+  function openNameEdit() {
+    if (!operator) return;
+    setNameForm(operator.name);
+    setNameErr('');
+    setEditingName(true);
+  }
+
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || !operator || !nameForm.trim()) return;
+    setNameSaving(true); setNameErr('');
+    try {
+      const { operator: updated } = await patchOperator(id, { name: nameForm.trim() });
+      setOperator(updated);
+      setEditingName(false);
+    } catch (e) {
+      setNameErr(String(e));
+    } finally {
+      setNameSaving(false);
+    }
+  }
 
   function openCatEdit() {
     if (!operator) return;
@@ -639,7 +665,28 @@ export default function OperatorEdit() {
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">{operator.name}</h1>
+          {editingName ? (
+            <form onSubmit={saveName} className="flex items-center gap-2 flex-wrap">
+              <input
+                className="input py-1 text-sm"
+                value={nameForm}
+                onChange={e => setNameForm(e.target.value)}
+                autoFocus
+              />
+              <button type="submit" className="btn-primary py-1 text-sm" disabled={nameSaving || !nameForm.trim()}>
+                {nameSaving ? '…' : 'Save'}
+              </button>
+              <button type="button" className="btn-ghost py-1 text-sm" onClick={() => setEditingName(false)}>
+                Cancel
+              </button>
+              {nameErr && <span className="text-red-400 text-xs">{nameErr}</span>}
+            </form>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-text">{operator.name}</h1>
+              <button className="text-teal hover:underline text-sm" onClick={openNameEdit}>edit name</button>
+            </div>
+          )}
           {editingCategory ? (
             <form onSubmit={saveCat} className="flex items-center gap-2 mt-2 flex-wrap">
               <select
