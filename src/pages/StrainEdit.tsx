@@ -56,6 +56,10 @@ export default function StrainEdit() {
   const [err, setErr] = useState('');
   const [aliasInput, setAliasInput] = useState('');
   const [terp, setTerp] = useState<{ name: string; effect: string }>({ name: '', effect: '' });
+  const [editingName, setEditingName] = useState(false);
+  const [nameForm, setNameForm] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameErr, setNameErr] = useState('');
 
   useEffect(() => {
     if (isNew || !id) return;
@@ -84,6 +88,27 @@ export default function StrainEdit() {
 
   function set<K extends keyof StrainForm>(k: K, v: StrainForm[K]) {
     setForm(f => ({ ...f, [k]: v }));
+  }
+
+  function openNameEdit() {
+    setNameForm(form.name);
+    setNameErr('');
+    setEditingName(true);
+  }
+
+  async function saveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!id || isNew || !nameForm.trim()) return;
+    setNameSaving(true); setNameErr('');
+    try {
+      const { strain: updated } = await updateStrain(id, { name: nameForm.trim() });
+      set('name', updated.name);
+      setEditingName(false);
+    } catch (e) {
+      setNameErr(String(e));
+    } finally {
+      setNameSaving(false);
+    }
   }
 
   function addAlias() {
@@ -133,7 +158,30 @@ export default function StrainEdit() {
         ← Strains
       </button>
 
-      <h1 className="text-2xl font-bold text-text">{isNew ? 'New Strain' : form.name}</h1>
+      {isNew ? (
+      <h1 className="text-2xl font-bold text-text">New Strain</h1>
+    ) : editingName ? (
+      <form onSubmit={saveName} className="flex items-center gap-2 flex-wrap">
+        <input
+          className="input py-1 text-sm"
+          value={nameForm}
+          onChange={e => setNameForm(e.target.value)}
+          autoFocus
+        />
+        <button type="submit" className="btn-primary py-1 text-sm" disabled={nameSaving || !nameForm.trim()}>
+          {nameSaving ? '…' : 'Save'}
+        </button>
+        <button type="button" className="btn-ghost py-1 text-sm" onClick={() => setEditingName(false)}>
+          Cancel
+        </button>
+        {nameErr && <span className="text-red-400 text-xs">{nameErr}</span>}
+      </form>
+    ) : (
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-text">{form.name}</h1>
+        <button className="text-teal hover:underline text-sm" onClick={openNameEdit}>edit name</button>
+      </div>
+    )}
 
       <form onSubmit={save} className="space-y-8">
 
