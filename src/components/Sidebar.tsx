@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
 
 const links = [
-  { to: '/',          label: 'Dashboard',  icon: '⬡' },
-  { to: '/operators', label: 'Operators',  icon: '🏪' },
-  { to: '/strains',   label: 'Strains',    icon: '🌿' },
-  { to: '/queue',     label: 'Queue',      icon: '📥' },
+  { to: '/',               label: 'Dashboard',    icon: '⬡' },
+  { to: '/operators',      label: 'Operators',    icon: '🏪' },
+  { to: '/strains',        label: 'Strains',      icon: '🌿' },
+  { to: '/strains/queue',  label: 'Strain Queue', icon: '🔍' },
+  { to: '/queue',          label: 'Op Queue',     icon: '📥' },
 ];
 
 export default function Sidebar() {

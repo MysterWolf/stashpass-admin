@@ -68,6 +68,18 @@ export interface OperatorProfile {
   lng: string | null;
 }
 
+export interface StrainQueueItem {
+  id: string;
+  name: string;
+  type: string | null;
+  device_id: string;
+  device_ids: string[];
+  surfaced_at: string;
+  status: 'pending' | 'enriching' | 'published' | 'rejected';
+  strain_id: string | null;
+  surface_count: number;
+}
+
 export interface Terpene {
   name: string;
   effect: string;

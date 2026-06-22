@@ -8,6 +8,7 @@ import Operators from './pages/Operators';
 import OperatorEdit from './pages/OperatorEdit';
 import Strains from './pages/Strains';
 import StrainEdit from './pages/StrainEdit';
+import StrainQueue from './pages/StrainQueue';
 import Queue from './pages/Queue';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/operators" element={<Operators />} />
           <Route path="/operators/:id" element={<OperatorEdit />} />
           <Route path="/strains" element={<Strains />} />
+          <Route path="/strains/queue" element={<StrainQueue />} />
           <Route path="/strains/:id" element={<StrainEdit />} />
           <Route path="/queue" element={<Queue />} />
         </Routes>

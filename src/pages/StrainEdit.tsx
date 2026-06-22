@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getStrain, createStrain, updateStrain } from '../api/strains';
+import { patchQueueItem } from '../api/queue';
 import type { Strain } from '../types';
 import Spinner from '../components/Spinner';
 
@@ -57,8 +58,16 @@ export default function StrainEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isNew = id === 'new';
+  const [searchParams] = useSearchParams();
+  const queueId   = isNew ? searchParams.get('queue_id') : null;
+  const queueName = isNew ? searchParams.get('qname') : null;
+  const queueType = isNew ? searchParams.get('qtype') as Strain['type'] | null : null;
 
-  const [form, setForm] = useState<StrainForm>(blank);
+  const [form, setForm] = useState<StrainForm>(() => ({
+    ...blank,
+    ...(queueName ? { name: queueName } : {}),
+    ...(queueType && TYPES.includes(queueType) ? { type: queueType } : {}),
+  }));
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [saved, setSavedMsg] = useState(false);
@@ -147,6 +156,9 @@ export default function StrainEdit() {
     try {
       if (isNew) {
         const { strain } = await createStrain(form);
+        if (queueId) {
+          await patchQueueItem(queueId, { status: 'published', strain_id: strain.id });
+        }
         navigate(`/strains/${strain.id}`, { replace: true });
       } else if (id) {
         await updateStrain(id, form);
