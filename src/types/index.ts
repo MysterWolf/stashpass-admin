@@ -91,6 +91,7 @@ export interface Strain {
   cautions: string | null;
   best_method: string | null;
   beginner_friendly: boolean;
+  dominance: 'true_sativa' | 'sativa_dominant' | 'balanced' | 'indica_dominant' | 'true_indica' | null;
   session_count: number;
   created_at: string;
   updated_at: string;

@@ -9,6 +9,14 @@ const USE_CASES = ['sleep', 'pain', 'anxiety', 'focus', 'social', 'appetite'];
 const FLAVORS = ['sweet', 'citrus', 'earthy', 'diesel', 'pine', 'floral', 'spicy', 'berry'];
 const METHODS = ['flower', 'vape', 'edible', 'concentrate', 'pre-roll'];
 const TYPES: Strain['type'][] = ['sativa', 'indica', 'hybrid'];
+const DOMINANCE_OPTIONS: { value: Strain['dominance']; label: string }[] = [
+  { value: null, label: '(unset)' },
+  { value: 'true_sativa', label: 'True Sativa' },
+  { value: 'sativa_dominant', label: 'Sativa-dominant' },
+  { value: 'balanced', label: 'Balanced Hybrid' },
+  { value: 'indica_dominant', label: 'Indica-dominant' },
+  { value: 'true_indica', label: 'True Indica' },
+];
 
 type StrainForm = Omit<Strain, 'id' | 'session_count' | 'created_at' | 'updated_at' | 'active'>;
 
@@ -17,6 +25,7 @@ const blank: StrainForm = {
   thc_min: null, thc_max: null, cbd_min: null, cbd_max: null,
   terpenes: [], effects: [], use_cases: [], flavors: [],
   about: null, cautions: null, best_method: null, beginner_friendly: false,
+  dominance: null,
 };
 
 function ChipSelector({ label, options, selected, onChange }: {
@@ -81,6 +90,7 @@ export default function StrainEdit() {
         cautions: r.strain.cautions,
         best_method: r.strain.best_method,
         beginner_friendly: r.strain.beginner_friendly,
+        dominance: r.strain.dominance ?? null,
       }))
       .catch(() => navigate('/strains'))
       .finally(() => setLoading(false));
@@ -216,6 +226,19 @@ export default function StrainEdit() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="label">Dominance</label>
+            <select
+              className="input max-w-xs"
+              value={form.dominance ?? ''}
+              onChange={e => set('dominance', (e.target.value || null) as Strain['dominance'])}
+            >
+              {DOMINANCE_OPTIONS.map(o => (
+                <option key={String(o.value)} value={o.value ?? ''}>{o.label}</option>
+              ))}
+            </select>
           </div>
 
           <div>
