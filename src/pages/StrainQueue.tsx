@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listStrainQueue, patchQueueItem } from '../api/queue';
+import { enrichStrain } from '../api/strains';
 import type { StrainQueueItem } from '../types';
 import Spinner from '../components/Spinner';
 
@@ -35,14 +36,24 @@ export default function StrainQueue() {
     try {
       await patchQueueItem(item.id, { status: 'enriching' });
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'enriching' } : i));
-      const params = new URLSearchParams({
-        queue_id: item.id,
-        qname: item.name,
-        ...(item.type ? { qtype: item.type } : {}),
+
+      const { enriched } = await enrichStrain(item.name, item.type);
+
+      navigate('/strains/new', {
+        state: {
+          queue_id: item.id,
+          qname: item.name,
+          qtype: item.type ?? null,
+          enriched,
+        },
       });
-      navigate(`/strains/new?${params.toString()}`);
     } catch (e) {
-      alert(String(e));
+      // Revert to pending if enrichment fails
+      try {
+        await patchQueueItem(item.id, { status: 'pending' });
+        setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'pending' } : i));
+      } catch { /* ignore revert failure */ }
+      alert(`Enrichment failed: ${String(e)}`);
     } finally {
       setBusy(null);
     }
@@ -112,11 +123,13 @@ export default function StrainQueue() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button
-                        className="btn-primary text-xs px-3 py-1.5"
-                        disabled={busy === item.id}
+                        className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+                        disabled={busy === item.id || item.status !== 'pending'}
                         onClick={() => enrich(item)}
                       >
-                        {busy === item.id ? '…' : 'Enrich'}
+                        {busy === item.id ? (
+                          <><Spinner size={12} />Enriching…</>
+                        ) : 'Enrich'}
                       </button>
                       <button
                         className="btn-ghost text-xs px-3 py-1.5 hover:text-red-400"

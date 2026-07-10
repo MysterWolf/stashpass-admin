@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { getStrain, createStrain, updateStrain } from '../api/strains';
 import { patchQueueItem } from '../api/queue';
-import type { Strain } from '../types';
+import type { EnrichedStrain, Strain } from '../types';
 import Spinner from '../components/Spinner';
 
 const EFFECTS = ['relaxed', 'euphoric', 'creative', 'focused', 'sleepy', 'energetic', 'giggly'];
@@ -57,16 +57,37 @@ function ChipSelector({ label, options, selected, onChange }: {
 export default function StrainEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isNew = id === 'new';
   const [searchParams] = useSearchParams();
-  const queueId   = isNew ? searchParams.get('queue_id') : null;
-  const queueName = isNew ? searchParams.get('qname') : null;
-  const queueType = isNew ? searchParams.get('qtype') as Strain['type'] | null : null;
+
+  // Queue context: prefer router state (AI enrich flow) over URL params (legacy direct flow)
+  const routerState = isNew ? (location.state as { queue_id?: string; qname?: string; qtype?: string; enriched?: EnrichedStrain } | null) : null;
+  const queueId   = isNew ? (routerState?.queue_id   ?? searchParams.get('queue_id')) : null;
+  const queueName = isNew ? (routerState?.qname       ?? searchParams.get('qname'))   : null;
+  const queueType = isNew ? (routerState?.qtype       ?? searchParams.get('qtype')) as Strain['type'] | null : null;
+  const enriched  = isNew ? (routerState?.enriched ?? null) : null;
 
   const [form, setForm] = useState<StrainForm>(() => ({
     ...blank,
     ...(queueName ? { name: queueName } : {}),
     ...(queueType && TYPES.includes(queueType) ? { type: queueType } : {}),
+    // Merge AI-enriched fields when coming from the Enrich flow
+    ...(enriched ? {
+      about:            enriched.about,
+      lineage:          enriched.lineage,
+      thc_min:          enriched.thc_min,
+      thc_max:          enriched.thc_max,
+      cbd_min:          enriched.cbd_min,
+      cbd_max:          enriched.cbd_max,
+      terpenes:         enriched.terpenes,
+      effects:          enriched.effects,
+      use_cases:        enriched.use_cases,
+      flavors:          enriched.flavors,
+      cautions:         enriched.cautions,
+      best_method:      enriched.best_method,
+      beginner_friendly: enriched.beginner_friendly,
+    } : {}),
   }));
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -432,16 +453,18 @@ export default function StrainEdit() {
           </label>
         </section>
 
-        {/* ── AI Enrichment placeholder ─────────────────────────────────────── */}
-        <section className="border border-dashed border-border rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-muted mb-1">AI Enrichment</h2>
-          <p className="text-xs text-muted mb-3">
-            Auto-fill the intelligence profile using the spinup-strain-profile skill.
-          </p>
-          <button type="button" disabled className="btn-ghost opacity-40 text-xs cursor-not-allowed">
-            Enrich with AI — coming soon
-          </button>
-        </section>
+        {/* ── AI Enrichment banner (when pre-filled from queue) ────────────── */}
+        {enriched && (
+          <section className="border border-teal/30 bg-teal/5 rounded-xl p-4 flex items-start gap-3">
+            <span className="text-teal text-lg leading-none mt-0.5">✦</span>
+            <div>
+              <p className="text-sm font-medium text-teal">AI-enriched</p>
+              <p className="text-xs text-muted mt-0.5">
+                Fields pre-filled by Claude. Review everything before saving — you're the final editor.
+              </p>
+            </div>
+          </section>
+        )}
 
         {err && <p className="text-red-400 text-sm">{err}</p>}
 

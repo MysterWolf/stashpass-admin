@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Strain } from '../types';
+import type { EnrichedStrain, Strain } from '../types';
 
 export const listStrains = (params?: { q?: string; type?: string }) => {
   const qs = new URLSearchParams();
@@ -20,3 +20,6 @@ export const updateStrain = (id: string, body: Partial<Strain>) =>
 
 export const deleteStrain = (id: string) =>
   api.delete<{ deleted: boolean }>(`/strains/${id}`);
+
+export const enrichStrain = (name: string, type?: string | null) =>
+  api.post<{ enriched: EnrichedStrain }>('/ai/enrich-strain', { name, ...(type ? { type } : {}) });

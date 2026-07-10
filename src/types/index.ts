@@ -85,6 +85,22 @@ export interface Terpene {
   effect: string;
 }
 
+export interface EnrichedStrain {
+  about: string | null;
+  lineage: string | null;
+  thc_min: number | null;
+  thc_max: number | null;
+  cbd_min: number | null;
+  cbd_max: number | null;
+  terpenes: Terpene[];
+  effects: string[];
+  use_cases: string[];
+  flavors: string[];
+  cautions: string | null;
+  best_method: string | null;
+  beginner_friendly: boolean;
+}
+
 export interface Strain {
   id: string;
   name: string;
