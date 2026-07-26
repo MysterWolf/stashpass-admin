@@ -76,6 +76,7 @@ export default function StrainEdit() {
     ...(enriched ? {
       about:            enriched.about,
       lineage:          enriched.lineage,
+      dominance:        enriched.dominance,
       thc_min:          enriched.thc_min,
       thc_max:          enriched.thc_max,
       cbd_min:          enriched.cbd_min,

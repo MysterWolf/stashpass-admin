@@ -88,6 +88,7 @@ export interface Terpene {
 export interface EnrichedStrain {
   about: string | null;
   lineage: string | null;
+  dominance: 'true_sativa' | 'sativa_dominant' | 'balanced' | 'indica_dominant' | 'true_indica' | null;
   thc_min: number | null;
   thc_max: number | null;
   cbd_min: number | null;
